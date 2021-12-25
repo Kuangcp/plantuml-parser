@@ -4,9 +4,13 @@ import com.github.javaparser.ast.*;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import com.shuzijun.plantumlparser.core.constant.RelationType;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 类
@@ -25,26 +29,55 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
     }
 
     @Override
-    public void visit(ClassOrInterfaceDeclaration cORid, PUmlView pUmlView) {
+    public void visit(ClassOrInterfaceDeclaration declaration, PUmlView pUmlView) {
         PUmlClass pUmlClass = new PUmlClass();
         if (parserConfig.isShowPackage()) {
             pUmlClass.setPackageName(packageName);
         } else {
             pUmlClass.setPackageName("");
         }
-        pUmlClass.setClassName(cORid.getNameAsString());
-        if (cORid.isInterface()) {
+        pUmlClass.setClassName(declaration.getNameAsString());
+        if (declaration.isInterface()) {
             pUmlClass.setClassType("interface");
         } else {
             pUmlClass.setClassType("class");
-            for (Modifier modifier : cORid.getModifiers()) {
+            for (Modifier modifier : declaration.getModifiers()) {
                 if (modifier.toString().trim().contains("abstract")) {
                     pUmlClass.setClassType("abstract class");
                     break;
                 }
             }
         }
-        for (FieldDeclaration field : cORid.getFields()) {
+        fillFields(declaration, pUmlClass);
+        fillConstructors(declaration, pUmlClass);
+        fillMethods(declaration, pUmlClass);
+        pUmlView.addPUmlClass(pUmlClass);
+
+        final Optional<Node> parentNode = declaration.getParentNode();
+        if (!parentNode.isPresent()) {
+            System.out.println("WARN no parent" + declaration);
+            return;
+        }
+        Node node = parentNode.get();
+
+        NodeList<ImportDeclaration> importDeclarations = parseImport(node, pUmlClass, pUmlView);
+
+        Map<String, String> importMap = new HashMap<>();
+        if (importDeclarations != null) {
+            for (ImportDeclaration importDeclaration : importDeclarations) {
+                importMap.put(importDeclaration.getName().getIdentifier(), importDeclaration.getName().toString());
+            }
+        }
+
+        fillExtendOrImplRelation(pUmlView, pUmlClass, importMap, declaration.getImplementedTypes(), RelationType.IMPLEMENT);
+        fillExtendOrImplRelation(pUmlView, pUmlClass, importMap, declaration.getExtendedTypes(), RelationType.EXTENDS);
+        fillComposition(declaration, pUmlView, pUmlClass, importMap);
+
+        super.visit(declaration, pUmlView);
+    }
+
+    private void fillFields(ClassOrInterfaceDeclaration declaration, PUmlClass pUmlClass) {
+        for (FieldDeclaration field : declaration.getFields()) {
             PUmlField pUmlField = new PUmlField();
             if (field.getModifiers().size() != 0) {
                 for (Modifier modifier : field.getModifiers()) {
@@ -56,14 +89,22 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
             }
             if (parserConfig.isFieldModifier(pUmlField.getVisibility())) {
                 pUmlField.setStatic(field.isStatic());
-                pUmlField.setType(field.getVariables().getFirst().get().getTypeAsString());
-                pUmlField.setName(field.getVariables().getFirst().get().getNameAsString());
+                final Optional<VariableDeclarator> firstNode = field.getVariables().getFirst();
+                if (!firstNode.isPresent()) {
+                    System.out.println("WARN " + field);
+                    continue;
+                }
+                pUmlField.setType(firstNode.get().getTypeAsString());
+                pUmlField.setName(firstNode.get().getNameAsString());
                 pUmlClass.addPUmlFieldList(pUmlField);
             }
 
         }
-        if(parserConfig.isShowConstructors()){
-            for (ConstructorDeclaration constructor : cORid.getConstructors()) {
+    }
+
+    private void fillConstructors(ClassOrInterfaceDeclaration declaration, PUmlClass pUmlClass) {
+        if (parserConfig.isShowConstructors()) {
+            for (ConstructorDeclaration constructor : declaration.getConstructors()) {
                 PUmlMethod pUmlMethod = new PUmlMethod();
                 if (constructor.getModifiers().size() != 0) {
                     for (Modifier modifier : constructor.getModifiers()) {
@@ -85,7 +126,13 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
                 }
             }
         }
-        for (MethodDeclaration method : cORid.getMethods()) {
+    }
+
+    private void fillMethods(ClassOrInterfaceDeclaration declaration, PUmlClass pUmlClass) {
+        if (!parserConfig.isShowMethod()) {
+            return;
+        }
+        for (MethodDeclaration method : declaration.getMethods()) {
             PUmlMethod pUmlMethod = new PUmlMethod();
 
             if (method.getModifiers().size() != 0) {
@@ -107,56 +154,58 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
                 pUmlClass.addPUmlMethodList(pUmlMethod);
             }
         }
-        pUmlView.addPUmlClass(pUmlClass);
+    }
 
-        Node node = cORid.getParentNode().get();
-
-        NodeList<ImportDeclaration> importDeclarations = parseImport(node, pUmlClass, pUmlView);
-
-        Map<String, String> importMap = new HashMap<>();
-        if (importDeclarations != null) {
-            for (ImportDeclaration importDeclaration : importDeclarations) {
-                importMap.put(importDeclaration.getName().getIdentifier(), importDeclaration.getName().toString());
-            }
+    private void fillComposition(ClassOrInterfaceDeclaration declaration,
+                                 PUmlView pUmlView,
+                                 PUmlClass pUmlClass,
+                                 Map<String, String> importMap) {
+        final List<FieldDeclaration> fields = declaration.getFields();
+        if (fields.isEmpty()) {
+            return;
         }
-        if (cORid.getImplementedTypes().size() != 0) {
-            for (ClassOrInterfaceType implementedType : cORid.getImplementedTypes()) {
-                PUmlRelation pUmlRelation = new PUmlRelation();
-                pUmlRelation.setTarget(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
-                if (importMap.containsKey(implementedType.getNameAsString())) {
-                    if (parserConfig.isShowPackage()) {
-                        pUmlRelation.setSource(importMap.get(implementedType.getNameAsString()));
-                    } else {
-                        pUmlRelation.setSource(implementedType.getNameAsString());
-                    }
+        fields.stream()
+                .map(v -> v.getVariables().getFirst())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(v -> importMap.getOrDefault(v.getTypeAsString(), getPackageNamePrefix(pUmlClass.getPackageName()) + v.getTypeAsString()))
+                .filter(v -> Objects.nonNull(v) && !v.startsWith("java."))
+                .forEach(v -> {
+                    PUmlRelation pUmlRelation = new PUmlRelation();
+                    pUmlRelation.setChild(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
+                    pUmlRelation.setParent(v);
+                    pUmlRelation.setRelation(RelationType.COMPOSITION);
+                    pUmlView.addPUmlRelation(pUmlRelation);
+                });
+    }
+
+    private void fillExtendOrImplRelation(PUmlView pUmlView,
+                                          PUmlClass pUmlClass,
+                                          Map<String, String> importMap,
+                                          NodeList<ClassOrInterfaceType> implementedTypes,
+                                          String relationSignal) {
+        if (implementedTypes.size() == 0) {
+            return;
+        }
+        for (ClassOrInterfaceType implementedType : implementedTypes) {
+            final String nameAsString = implementedType.getNameAsString();
+            if (Objects.equals(nameAsString, "Serializable") && !parserConfig.isShowSerializableImpl()) {
+                return;
+            }
+            PUmlRelation pUmlRelation = new PUmlRelation();
+            pUmlRelation.setChild(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
+            if (importMap.containsKey(nameAsString)) {
+                if (parserConfig.isShowPackage()) {
+                    pUmlRelation.setParent(importMap.get(nameAsString));
                 } else {
-                    pUmlRelation.setSource(getPackageNamePrefix(pUmlClass.getPackageName()) + implementedType.getNameAsString());
+                    pUmlRelation.setParent(nameAsString);
                 }
-                pUmlRelation.setRelation("<|..");
-                pUmlView.addPUmlRelation(pUmlRelation);
+            } else {
+                pUmlRelation.setParent(getPackageNamePrefix(pUmlClass.getPackageName()) + nameAsString);
             }
+            pUmlRelation.setRelation(relationSignal);
+            pUmlView.addPUmlRelation(pUmlRelation);
         }
-
-        if (cORid.getExtendedTypes().size() != 0) {
-            for (ClassOrInterfaceType extendedType : cORid.getExtendedTypes()) {
-                PUmlRelation pUmlRelation = new PUmlRelation();
-                pUmlRelation.setTarget(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
-                if (importMap.containsKey(extendedType.getNameAsString())) {
-                    if (parserConfig.isShowPackage()) {
-                        pUmlRelation.setSource(importMap.get(extendedType.getNameAsString()));
-                    } else {
-                        pUmlRelation.setSource(extendedType.getNameAsString());
-                    }
-                } else {
-                    pUmlRelation.setSource(getPackageNamePrefix(pUmlClass.getPackageName()) + extendedType.getNameAsString());
-                }
-                pUmlRelation.setRelation("<|--");
-                pUmlView.addPUmlRelation(pUmlRelation);
-
-            }
-        }
-
-        super.visit(cORid, pUmlView);
     }
 
     private NodeList<ImportDeclaration> parseImport(Node node, PUmlClass pUmlClass, PUmlView pUmlView) {
@@ -168,8 +217,8 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
             Node parentNode = node.getParentNode().get();
             if (parentNode instanceof CompilationUnit) {
                 PUmlRelation pUmlRelation = new PUmlRelation();
-                pUmlRelation.setTarget(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
-                pUmlRelation.setSource(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName().substring(0, pUmlClass.getClassName().lastIndexOf(".")));
+                pUmlRelation.setChild(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
+                pUmlRelation.setParent(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName().substring(0, pUmlClass.getClassName().lastIndexOf(".")));
                 pUmlRelation.setRelation("+..");
                 pUmlView.addPUmlRelation(pUmlRelation);
             }
@@ -178,11 +227,11 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
         return null;
     }
 
-    private String getPackageNamePrefix(String packageName){
-        if(packageName ==null || packageName.trim().equals("")){
+    private String getPackageNamePrefix(String packageName) {
+        if (packageName == null || packageName.trim().equals("")) {
             return "";
-        }else {
-            return packageName+ ".";
+        } else {
+            return packageName + ".";
         }
     }
 }

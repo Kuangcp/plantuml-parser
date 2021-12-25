@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'maven-publish'
 }
 
 group 'com.shuzijun'
@@ -12,28 +11,11 @@ repositories {
 }
 
 dependencies {
-    compile "com.github.javaparser:javaparser-core:3.20.2"
-    compile "commons-io:commons-io:2.8.0"
+    implementation "com.github.javaparser:javaparser-core:3.20.2"
+    implementation "commons-io:commons-io:2.8.0"
+    testImplementation "junit:junit:4.12"
 }
 
 tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/shuzijun/plantuml-parser")
-            credentials {
-                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
-                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
-            }
-        }
-    }
-    publications {
-        gpr(MavenPublication) {
-            from(components.java)
-        }
-    }
 }

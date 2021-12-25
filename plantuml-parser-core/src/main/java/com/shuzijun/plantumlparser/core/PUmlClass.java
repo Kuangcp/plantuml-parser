@@ -36,6 +36,10 @@ public class PUmlClass {
         this.className = className;
     }
 
+    public String getFinalName() {
+        return this.packageName == null ? "" : this.packageName + "." + this.className;
+    }
+
     public String getClassType() {
         return classType;
     }
@@ -44,11 +48,9 @@ public class PUmlClass {
         this.classType = classType;
     }
 
-
     public void addPUmlFieldList(PUmlField pUmlField) {
         this.pUmlFieldList.add(pUmlField);
     }
-
 
     public void addPUmlMethodList(PUmlMethod pUmlMethod) {
         this.pUmlMethodList.add(pUmlMethod);
@@ -57,8 +59,8 @@ public class PUmlClass {
     @Override
     public String toString() {
         return classType + " " + ((packageName == null || packageName.trim().equals("")) ? "" : (packageName + ".")) + className + " {\n" +
-                (pUmlFieldList.isEmpty() ? "" : pUmlFieldList.stream().map(pUmlField -> pUmlField.toString()).collect(Collectors.joining("\n")) + "\n") +
-                (pUmlMethodList.isEmpty() ? "" : pUmlMethodList.stream().map(pUmlField -> pUmlField.toString()).collect(Collectors.joining("\n")) + "\n") +
+                (pUmlFieldList.stream().map(PUmlField::toString).collect(Collectors.joining("\n")) + "\n") +
+                (pUmlMethodList.stream().map(PUmlMethod::toString).collect(Collectors.joining("\n")) + "\n") +
                 "}";
     }
 }

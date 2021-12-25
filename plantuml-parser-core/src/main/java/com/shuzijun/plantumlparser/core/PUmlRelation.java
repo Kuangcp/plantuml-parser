@@ -1,5 +1,8 @@
 package com.shuzijun.plantumlparser.core;
 
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 /**
  * class之间的关系
  *
@@ -7,18 +10,27 @@ package com.shuzijun.plantumlparser.core;
  */
 public class PUmlRelation {
 
-    private String source;
+    /**
+     * 符号端
+     */
+    private String parent;
 
-    private String target;
+    private String parentBean;
+
+    /**
+     * 直线端
+     */
+    private String child;
+    private String childBean;
 
     private String relation;
 
-    public void setSource(String source) {
-        this.source = source;
+    public void setParent(String parent) {
+        this.parent = parent;
     }
 
-    public void setTarget(String target) {
-        this.target = target;
+    public void setChild(String child) {
+        this.child = child;
     }
 
     public void setRelation(String relation) {
@@ -27,6 +39,22 @@ public class PUmlRelation {
 
     @Override
     public String toString() {
-        return source + " " + relation + " " + target;
+        return parent + " " + relation + " " + child;
+    }
+
+    public String getParent() {
+        return parent;
+    }
+
+    public String getChild() {
+        return child;
+    }
+
+    public String getRelation() {
+        return relation;
+    }
+
+    public String buildKey() {
+        return Stream.of(parent, relation, child).sorted().collect(Collectors.joining(""));
     }
 }

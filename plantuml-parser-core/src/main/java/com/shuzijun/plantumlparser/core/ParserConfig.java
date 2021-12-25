@@ -15,20 +15,51 @@ public class ParserConfig {
     /**
      * 解析的文件路径
      */
-    private Map<String, File> fileMap = new HashMap<>();
+    private final Map<String, File> fileMap = new HashMap<>();
 
     /**
      * 输出文件路径
      */
     private String outFilePath;
 
-    private Set<String> fieldModifier = new HashSet<>();
+    private final Set<String> fieldModifier = new HashSet<>();
 
-    private Set<String> methodModifier = new HashSet<>();
+    private final Set<String> methodModifier = new HashSet<>();
 
+    /**
+     * 展示类 时包含包名
+     */
     private boolean showPackage = true;
 
+    /**
+     * 展示构造器
+     */
     private boolean showConstructors = false;
+
+    /**
+     * 展示实现 Serializable 接口关系
+     */
+    private boolean showSerializableImpl = false;
+
+    /**
+     * 展示 方法
+     */
+    private boolean showMethod = false;
+    /**
+     * 只展示 复杂业务层 Service Adapter Handler
+     */
+    private boolean onlyShowLogicLayer = false;
+
+    /**
+     * 只展示具有关联关系的类
+     */
+    private boolean onlyShowRelationClass = true;
+
+    /**
+     * 展示 实体循环依赖
+     */
+    private boolean showCircularDepends = true;
+
 
     private ParserConfiguration.LanguageLevel languageLevel = ParserConfiguration.LanguageLevel.JAVA_8;
 
@@ -48,7 +79,8 @@ public class ParserConfig {
         File file = new File(filePath);
         if (!file.exists()) {
             return;
-        } else if (file.isDirectory()) {
+        }
+        if (file.isDirectory()) {
             Collection<File> files = FileUtils.listFiles(file, new String[]{"java"}, Boolean.TRUE);
             files.forEach(fileTemp -> fileMap.put(fileTemp.getPath(), fileTemp));
         } else if (filePath.endsWith("java")) {
@@ -94,5 +126,55 @@ public class ParserConfig {
 
     public void setLanguageLevel(ParserConfiguration.LanguageLevel languageLevel) {
         this.languageLevel = languageLevel;
+    }
+
+    public boolean isShowSerializableImpl() {
+        return showSerializableImpl;
+    }
+
+    public void setShowSerializableImpl(boolean showSerializableImpl) {
+        this.showSerializableImpl = showSerializableImpl;
+    }
+
+    public boolean isOnlyShowLogicLayer() {
+        return onlyShowLogicLayer;
+    }
+
+    public void setOnlyShowLogicLayer(boolean onlyShowLogicLayer) {
+        this.onlyShowLogicLayer = onlyShowLogicLayer;
+    }
+
+    public boolean isLogicLayer(String className) {
+        return className.contains("Impl")
+                || className.contains("Handler")
+                || className.contains("Adapter")
+                || className.contains("Aspect")
+                || className.contains("Facade")
+                || className.contains("Schedule")
+                ;
+    }
+
+    public boolean isShowMethod() {
+        return showMethod;
+    }
+
+    public void setShowMethod(boolean showMethod) {
+        this.showMethod = showMethod;
+    }
+
+    public boolean isOnlyShowRelationClass() {
+        return onlyShowRelationClass;
+    }
+
+    public void setOnlyShowRelationClass(boolean onlyShowRelationClass) {
+        this.onlyShowRelationClass = onlyShowRelationClass;
+    }
+
+    public boolean isShowCircularDepends() {
+        return showCircularDepends;
+    }
+
+    public void setShowCircularDepends(boolean showCircularDepends) {
+        this.showCircularDepends = showCircularDepends;
     }
 }
