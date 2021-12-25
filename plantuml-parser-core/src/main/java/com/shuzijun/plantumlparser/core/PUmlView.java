@@ -40,25 +40,21 @@ public class PUmlView {
 
     public String buildUmlContent() {
         if (parserConfig.isShowCircularDepends()) {
-            // 直接循环依赖
-//            relations.stream()
-//                    .collect(Collectors.groupingBy(PUmlRelation::buildKey))
-//                    .entrySet()
-//                    .stream()
-//                    .filter(v -> v.getValue().size() > 1)
-//                    .map(Map.Entry::getKey).forEach(v -> {
-//                System.out.println(v);
-//            });
+            // FIXME error
+            final Map<String, String> extendsMap = relations.stream()
+                    .filter(v -> Objects.equals(v.getRelation(), RelationType.EXTENDS) || Objects.equals(v.getRelation(), RelationType.IMPLEMENT))
+                    .collect(Collectors.toMap(PUmlRelation::getChild, PUmlRelation::getParent, (front, current) -> current));
 
             final Map<String, String> relationMap = relations.stream()
                     .filter(v -> Objects.equals(v.getRelation(), RelationType.COMPOSITION))
-                    .peek(v -> {
-                    })
-                    .collect(Collectors.toMap(PUmlRelation::getParent, PUmlRelation::getChild, (front, current) -> current));
+//                    .collect(Collectors.toMap(PUmlRelation::getParent, PUmlRelation::getChild, (front, current) -> current));
+                    .collect(Collectors.toMap(PUmlRelation::getParent, v -> extendsMap.getOrDefault(v.getChild(), v.getChild()), (front, current) -> current));
+
             System.out.println();
             for (Map.Entry<String, String> entry : relationMap.entrySet()) {
                 Set<String> cache = new HashSet<>();
                 String next = relationMap.get(entry.getValue());
+
                 cache.add(next);
                 while (next != null) {
                     next = relationMap.get(next);

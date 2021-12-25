@@ -2,10 +2,12 @@ package com.shuzijun.plantumlparser.core;
 
 import com.github.javaparser.ast.*;
 import com.github.javaparser.ast.body.*;
+import com.github.javaparser.ast.nodeTypes.NodeWithType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.shuzijun.plantumlparser.core.constant.RelationType;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,9 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
     private final String packageName;
 
     private final ParserConfig parserConfig;
+
+    private final List<String> IGNORE_COMPOSITION = Arrays.asList("short", "Short", "int", "Integer", "long", "Long", "String", "char", "Char", "boolean", "Boolean", "byte", "Byte");
+    private final List<String> IGNORE_COMPOSITION_PREFIX = Arrays.asList("List", "Set", "Map", "Collection", "Function");
 
     public ClassVoidVisitor(String packageName, ParserConfig parserConfig) {
         this.packageName = packageName;
@@ -156,6 +161,23 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
         }
     }
 
+    private String deGeneric(String typeStr) {
+        final int idx = typeStr.indexOf("<");
+        if (idx == -1) {
+            return typeStr;
+        }
+        return typeStr.substring(0, idx);
+    }
+
+    private String deArray(String typeStr) {
+        final int idx = typeStr.indexOf("[");
+        if (idx == -1) {
+            return typeStr;
+        }
+        return typeStr.substring(0, idx);
+    }
+
+
     private void fillComposition(ClassOrInterfaceDeclaration declaration,
                                  PUmlView pUmlView,
                                  PUmlClass pUmlClass,
@@ -168,12 +190,21 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
                 .map(v -> v.getVariables().getFirst())
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .map(v -> importMap.getOrDefault(v.getTypeAsString(), getPackageNamePrefix(pUmlClass.getPackageName()) + v.getTypeAsString()))
-                .filter(v -> Objects.nonNull(v) && !v.startsWith("java."))
+                .map(NodeWithType::getTypeAsString)
+                .map(this::deGeneric)
+                .map(this::deArray)
                 .forEach(v -> {
+                    if (IGNORE_COMPOSITION.contains(v)) {
+                        return;
+                    }
+                    if (IGNORE_COMPOSITION_PREFIX.stream().anyMatch(v::startsWith)) {
+                        return;
+                    }
+                    String longType = importMap.getOrDefault(v, getPackageNamePrefix(pUmlClass.getPackageName()) + v);
+
                     PUmlRelation pUmlRelation = new PUmlRelation();
                     pUmlRelation.setChild(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
-                    pUmlRelation.setParent(v);
+                    pUmlRelation.setParent(longType);
                     pUmlRelation.setRelation(RelationType.COMPOSITION);
                     pUmlView.addPUmlRelation(pUmlRelation);
                 });
@@ -219,7 +250,7 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
                 PUmlRelation pUmlRelation = new PUmlRelation();
                 pUmlRelation.setChild(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());
                 pUmlRelation.setParent(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName().substring(0, pUmlClass.getClassName().lastIndexOf(".")));
-                pUmlRelation.setRelation("+..");
+                pUmlRelation.setRelation(RelationType.IMPORT);
                 pUmlView.addPUmlRelation(pUmlRelation);
             }
             parseImport(parentNode, pUmlClass, pUmlView);

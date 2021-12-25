@@ -10,4 +10,6 @@ public interface RelationType {
     String EXTENDS = "<|--";
 
     String IMPLEMENT = "<|..";
+
+    String IMPORT = "+..";
 }

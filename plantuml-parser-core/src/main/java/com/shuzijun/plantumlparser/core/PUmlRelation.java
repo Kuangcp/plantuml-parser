@@ -1,8 +1,5 @@
 package com.shuzijun.plantumlparser.core;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 /**
  * class之间的关系
  *
@@ -11,14 +8,14 @@ import java.util.stream.Stream;
 public class PUmlRelation {
 
     /**
-     * 符号端
+     * 符号端 被依赖一方
      */
     private String parent;
 
     private String parentBean;
 
     /**
-     * 直线端
+     * 直线端 需要依赖外部的一方
      */
     private String child;
     private String childBean;
@@ -54,7 +51,19 @@ public class PUmlRelation {
         return relation;
     }
 
-    public String buildKey() {
-        return Stream.of(parent, relation, child).sorted().collect(Collectors.joining(""));
+    public String getParentBean() {
+        return parentBean;
+    }
+
+    public void setParentBean(String parentBean) {
+        this.parentBean = parentBean;
+    }
+
+    public String getChildBean() {
+        return childBean;
+    }
+
+    public void setChildBean(String childBean) {
+        this.childBean = childBean;
     }
 }
