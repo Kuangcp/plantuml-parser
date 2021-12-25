@@ -25,8 +25,10 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
 
     private final ParserConfig parserConfig;
 
-    private final List<String> IGNORE_COMPOSITION = Arrays.asList("short", "Short", "int", "Integer", "long", "Long", "String", "char", "Char", "boolean", "Boolean", "byte", "Byte");
-    private final List<String> IGNORE_COMPOSITION_PREFIX = Arrays.asList("List", "Set", "Map", "Collection", "Function");
+    private final List<String> IGNORE_COMPOSITION = Arrays.asList("short", "Short", "int", "Integer", "long", "Long",
+            "String", "char", "Char", "boolean", "Boolean", "byte", "Byte", "BigDecimal", "Object", "T", "Charset",
+            "Date", "LocalDate", "LocalDateTime");
+    private final List<String> IGNORE_COMPOSITION_PREFIX = Arrays.asList("ArrayList", "List", "Set", "Map", "Collection", "Function");
 
     public ClassVoidVisitor(String packageName, ParserConfig parserConfig) {
         this.packageName = packageName;
@@ -201,6 +203,9 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
                         return;
                     }
                     String longType = importMap.getOrDefault(v, getPackageNamePrefix(pUmlClass.getPackageName()) + v);
+//                    if (longType.startsWith("java")){
+//                        return;
+//                    }
 
                     PUmlRelation pUmlRelation = new PUmlRelation();
                     pUmlRelation.setChild(getPackageNamePrefix(pUmlClass.getPackageName()) + pUmlClass.getClassName());

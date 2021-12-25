@@ -39,8 +39,10 @@ public class PUmlView {
     }
 
     public String buildUmlContent() {
+        // TODO 支持 扫描所有类，但是关系只以关注的包 作为第一级 依次往上 得到整个树
+
         if (parserConfig.isShowCircularDepends()) {
-            // FIXME error
+            // FIXME 校验 循环依赖错误
             final Map<String, String> extendsMap = relations.stream()
                     .filter(v -> Objects.equals(v.getRelation(), RelationType.EXTENDS) || Objects.equals(v.getRelation(), RelationType.IMPLEMENT))
                     .collect(Collectors.toMap(PUmlRelation::getChild, PUmlRelation::getParent, (front, current) -> current));
