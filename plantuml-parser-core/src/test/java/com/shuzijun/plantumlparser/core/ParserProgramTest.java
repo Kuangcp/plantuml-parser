@@ -19,7 +19,34 @@ public class ParserProgramTest {
         parserConfig.addFieldModifier("private");
         parserConfig.addMethodModifier("public");
 
-        parserConfig.setOutFilePath("./test.wsd");
+        parserConfig.setOnlyShowLogicLayer(false);
+        parserConfig.setLogicPredicate(className ->
+                className.contains("Impl")
+                        || className.contains("Handler")
+                        || className.contains("Adapter")
+                        || className.contains("Aspect")
+                        || className.contains("Facade")
+                        || className.contains("Synchronizer")
+                        || className.contains("Schedule"));
+
+        parserConfig.setOutSvg(true);
+        parserConfig.setOutFilePath("./test.svg");
+//        parserConfig.setOutFilePath("./test.wsd");
+//        parserConfig.setOutFilePath("/home/kcp/test/wsd/out/test.wsd");
+        final ParserProgram app = new ParserProgram(parserConfig);
+        app.execute();
+    }
+
+    @Test
+    public void testHello() throws Exception {
+        final ParserConfig parserConfig = new ParserConfig();
+        parserConfig.addFilePath("absolute path");
+        parserConfig.addFieldModifier("public");
+        parserConfig.addFieldModifier("private");
+        parserConfig.addMethodModifier("public");
+
+        parserConfig.setOutSvg(true);
+        parserConfig.setOutFilePath("./test.svg");
         final ParserProgram app = new ParserProgram(parserConfig);
         app.execute();
     }
