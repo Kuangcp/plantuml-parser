@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * 类
@@ -32,7 +33,8 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
     private final List<String> IGNORE_COMPOSITION = Arrays.asList("short", "Short", "int", "Integer", "long", "Long",
             "String", "char", "Char", "boolean", "Boolean", "byte", "Byte", "BigDecimal", "Object", "T", "Charset",
             "Date", "LocalDate", "LocalDateTime");
-    private final List<String> IGNORE_COMPOSITION_PREFIX = Arrays.asList("ArrayList", "List", "Set", "Map", "Collection", "Function");
+    private final List<String> IGNORE_COMPOSITION_PREFIX = Arrays.asList("ArrayList", "List", "Set", "Map",
+            "Collection", "Function", "Predicate","Consumer");
 
     public ClassVoidVisitor(String packageName, ParserConfig parserConfig) {
         this.packageName = packageName;

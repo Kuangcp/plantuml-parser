@@ -1,0 +1,14 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(":plantuml-parser-core")
+    implementation "commons-io:commons-io:2.8.0"
+    implementation "com.bladejava:blade-mvc:2.0.14.RELEASE"
+    testImplementation "junit:junit:4.12"
+}

@@ -1,3 +1,4 @@
 rootProject.name = 'plantuml-parser'
 include 'plantuml-parser-core'
+include 'parser-web'
 

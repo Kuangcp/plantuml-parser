@@ -9,6 +9,7 @@ import com.github.javaparser.ast.visitor.VoidVisitor;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -28,18 +29,7 @@ public class ParserProgram {
     }
 
     public void execute() throws IOException {
-        StaticJavaParser.getConfiguration().setLanguageLevel(Optional.ofNullable(parserConfig.getLanguageLevel())
-                .orElse(ParserConfiguration.LanguageLevel.JAVA_8));
-        PUmlView pUmlView = new PUmlView(this.parserConfig);
-
-        Set<File> files = this.parserConfig.getFilePaths();
-        for (File file : files) {
-            CompilationUnit compilationUnit = StaticJavaParser.parse(file);
-            Optional<PackageDeclaration> packageDeclaration = compilationUnit.getPackageDeclaration();
-            final String packageName = packageDeclaration.isPresent() ? packageDeclaration.get().getNameAsString() : "";
-            VoidVisitor<PUmlView> classNameCollector = new ClassVoidVisitor(packageName, parserConfig);
-            classNameCollector.visit(compilationUnit, pUmlView);
-        }
+        PUmlView pUmlView = readClass();
 
         // std out
         if (this.parserConfig.getOutFilePath() == null) {
@@ -64,5 +54,31 @@ public class ParserProgram {
         } else {
             FileUtils.write(outFile, pUmlView.buildUmlContent(), StandardCharsets.UTF_8);
         }
+    }
+
+    private PUmlView readClass() throws FileNotFoundException {
+        StaticJavaParser.getConfiguration().setLanguageLevel(Optional.ofNullable(parserConfig.getLanguageLevel())
+                .orElse(ParserConfiguration.LanguageLevel.JAVA_8));
+        PUmlView pUmlView = new PUmlView(this.parserConfig);
+
+        Set<File> files = this.parserConfig.getFilePaths();
+        for (File file : files) {
+            CompilationUnit compilationUnit = StaticJavaParser.parse(file);
+            Optional<PackageDeclaration> packageDeclaration = compilationUnit.getPackageDeclaration();
+            final String packageName = packageDeclaration.isPresent() ? packageDeclaration.get().getNameAsString() : "";
+            VoidVisitor<PUmlView> classNameCollector = new ClassVoidVisitor(packageName, parserConfig);
+            classNameCollector.visit(compilationUnit, pUmlView);
+        }
+        return pUmlView;
+    }
+
+    public Optional<String> buildSvg() {
+        try {
+            PUmlView pUmlView = readClass();
+            return Optional.of(SvgGeneratorService.getInstance().generateSvgFromPlantUml(pUmlView.buildUmlContent()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Optional.empty();
     }
 }
