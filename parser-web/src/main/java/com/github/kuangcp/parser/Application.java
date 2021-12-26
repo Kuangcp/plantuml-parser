@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -25,10 +24,13 @@ public class Application {
 
     private static final Logger log = LoggerFactory.getLogger(Application.class);
 
-    private static final Set<String> svgCache = new HashSet<>();
+    private static final Set<String> svgCache = CacheFileList.loadFromConfig();
 
     public static void main(String[] args) {
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> CacheFileList.storeToConfig(svgCache)));
+
+        // TODO 文件初始化到内存，退出或宕机 存储到文件
         Blade.of()
                 .get("uml", Application::svgHandler)
                 .get("/", Application::indexPage)
@@ -72,10 +74,10 @@ public class Application {
             return false;
         }
 
-        final String pathMd5 = md5(path);
+        final String pathMd5 = CacheFileList.md5(path);
 
         try {
-            File file = buildCacheFile(path);
+            File file = CacheFileList.buildCacheFile(path);
             if (!file.exists()) {
                 return false;
             }
@@ -94,49 +96,13 @@ public class Application {
         return false;
     }
 
-    private static File buildCacheFile(String path) {
-        final String osName = System.getProperty("os.name");
-        final String homeDir = System.getProperty("user.home");
-        final String pathMd5 = md5(path);
-
-        File file;
-        if (Objects.equals(osName, "Linux")) {
-            file = new File(homeDir + "/.plantuml-parser/" + pathMd5 + ".svg");
-        } else {
-            file = new File(homeDir + "\\.plantuml-parser\\" + pathMd5 + ".svg");
-        }
-        try {
-            FileUtils.forceMkdirParent(file);
-        } catch (IOException e) {
-            log.error("", e);
-        }
-        return file;
-    }
-
     private static void writeSvgCache(String path, String content) {
         try {
-            FileUtils.write(buildCacheFile(path), content, StandardCharsets.UTF_8);
+            FileUtils.write(CacheFileList.buildCacheFile(path), content, StandardCharsets.UTF_8);
         } catch (IOException e) {
             log.error("", e);
         }
     }
-
-    static String md5(String str) {
-        try {
-            final MessageDigest md5 = MessageDigest.getInstance("MD5");
-            md5.update(str.getBytes());
-            StringBuilder result = new StringBuilder();
-            final byte[] s = md5.digest();
-            for (byte b : s) {
-                result.append(Integer.toHexString((0x000000ff & b) | 0xffffff00).substring(6));
-            }
-            return result.toString();
-        } catch (NoSuchAlgorithmException e) {
-            log.error("", e);
-        }
-        return "";
-    }
-
 
     private static void svgHandler(RouteContext ctx) {
         final String path = ctx.query("path");
