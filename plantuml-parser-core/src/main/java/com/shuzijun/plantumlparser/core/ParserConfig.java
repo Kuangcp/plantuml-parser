@@ -46,7 +46,7 @@ public class ParserConfig {
     /**
      * 展示 方法
      */
-    private boolean showMethod = false;
+    private boolean showMethod = true;
     /**
      * 只展示 复杂业务层 Service Adapter Handler
      */
@@ -91,16 +91,22 @@ public class ParserConfig {
         }
     }
 
-    public void addFieldModifier(String modifier) {
-        fieldModifier.add(modifier);
+    public void addFieldModifier(String... modifier) {
+        if (Objects.isNull(modifier)) {
+            return;
+        }
+        fieldModifier.addAll(Arrays.asList(modifier));
     }
 
     public boolean isNeedShowModifier(String modifier) {
         return fieldModifier.contains(modifier);
     }
 
-    public void addMethodModifier(String modifier) {
-        methodModifier.add(modifier);
+    public void addMethodModifier(String... modifier) {
+        if (Objects.isNull(modifier)) {
+            return;
+        }
+        methodModifier.addAll(Arrays.asList(modifier));
     }
 
     public boolean isMethodModifier(String modifier) {

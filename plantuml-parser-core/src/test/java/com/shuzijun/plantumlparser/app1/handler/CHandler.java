@@ -5,5 +5,5 @@ package com.shuzijun.plantumlparser.app1.handler;
  */
 public class CHandler {
 
-    private AHandler handler;
+    private DHandler handler;
 }
