@@ -4,13 +4,19 @@ import com.blade.Blade;
 import com.blade.mvc.RouteContext;
 import com.shuzijun.plantumlparser.core.ParserConfig;
 import com.shuzijun.plantumlparser.core.ParserProgram;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 /**
  * @author https://github.com/kuangcp on 2021-12-26 19:57
@@ -19,7 +25,7 @@ public class Application {
 
     private static final Logger log = LoggerFactory.getLogger(Application.class);
 
-    private static final Map<String, String> svgCache = new ConcurrentHashMap<>();
+    private static final Set<String> svgCache = new HashSet<>();
 
     public static void main(String[] args) {
 
@@ -39,9 +45,11 @@ public class Application {
                 "    <title>Plant UML Reader</title>\n" +
                 "</head>\n" +
                 "<body>\n");
+
+        idxBuilder.append("<h2>Recent:</h2>");
         if (!svgCache.isEmpty()) {
-            idxBuilder.append("<h2>Recent:</h2><ol>");
-            svgCache.keySet().stream().sorted()
+            idxBuilder.append("<ol>");
+            svgCache.stream().sorted()
                     .forEach(key -> idxBuilder.append("<li><a href=\"/uml?path=")
                             .append(key).append("\" > ")
                             .append(key).append("</a> </li>"));
@@ -52,19 +60,92 @@ public class Application {
         ctx.html(idxBuilder.toString());
     }
 
-    private static void svgHandler(RouteContext ctx) {
-        final String path = ctx.query("path");
+    /**
+     * @return 是否命中缓存
+     */
+    private static boolean svgCache(RouteContext ctx) {
         final String refresh = ctx.query("refresh");
-        if (Objects.isNull(path)) {
-            ctx.json("{\"msg\":\"no path\"}");
-            return;
-        }
+        final String path = ctx.query("path");
 
         if (Objects.nonNull(refresh)) {
             svgCache.remove(path);
-        } else if (svgCache.containsKey(path)) {
-            ctx.response().contentType("image/svg+xml");
-            ctx.text(svgCache.get(path));
+            return false;
+        }
+
+        final String pathMd5 = md5(path);
+
+        try {
+            File file = buildCacheFile(path);
+            if (!file.exists()) {
+                return false;
+            }
+            final String fileContent = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+            if (Objects.nonNull(fileContent) && !fileContent.equals("")) {
+                log.info("hint cache: path={} md5={}", path, pathMd5);
+                svgCache.add(path);
+                ctx.response().contentType("image/svg+xml");
+                ctx.text(fileContent);
+                return true;
+            }
+        } catch (IOException e) {
+            log.error("", e);
+        }
+
+        return false;
+    }
+
+    private static File buildCacheFile(String path) {
+        final String osName = System.getProperty("os.name");
+        final String homeDir = System.getProperty("user.home");
+        final String pathMd5 = md5(path);
+
+        File file;
+        if (Objects.equals(osName, "Linux")) {
+            file = new File(homeDir + "/.plantuml-parser/" + pathMd5 + ".svg");
+        } else {
+            file = new File(homeDir + "\\.plantuml-parser\\" + pathMd5 + ".svg");
+        }
+        try {
+            FileUtils.forceMkdirParent(file);
+        } catch (IOException e) {
+            log.error("", e);
+        }
+        return file;
+    }
+
+    private static void writeSvgCache(String path, String content) {
+        try {
+            FileUtils.write(buildCacheFile(path), content, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.error("", e);
+        }
+    }
+
+    static String md5(String str) {
+        try {
+            final MessageDigest md5 = MessageDigest.getInstance("MD5");
+            md5.update(str.getBytes());
+            StringBuilder result = new StringBuilder();
+            final byte[] s = md5.digest();
+            for (byte b : s) {
+                result.append(Integer.toHexString((0x000000ff & b) | 0xffffff00).substring(6));
+            }
+            return result.toString();
+        } catch (NoSuchAlgorithmException e) {
+            log.error("", e);
+        }
+        return "";
+    }
+
+
+    private static void svgHandler(RouteContext ctx) {
+        final String path = ctx.query("path");
+        if (Objects.isNull(path) || path.trim().equals("")) {
+            indexPage(ctx);
+            return;
+        }
+
+        if (svgCache(ctx)) {
             return;
         }
 
@@ -81,7 +162,8 @@ public class Application {
         if (svgOpt.isPresent()) {
             ctx.response().contentType("image/svg+xml");
             ctx.text(svgOpt.get());
-            svgCache.put(path, svgOpt.get());
+            writeSvgCache(path, svgOpt.get());
+            svgCache.add(path);
         } else {
             ctx.json("{\"msg\":\"generate error\"}");
         }
