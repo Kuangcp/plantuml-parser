@@ -5,6 +5,10 @@ import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.nodeTypes.NodeWithType;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import com.shuzijun.plantumlparser.core.component.PUmlClass;
+import com.shuzijun.plantumlparser.core.component.PUmlField;
+import com.shuzijun.plantumlparser.core.component.PUmlMethod;
+import com.shuzijun.plantumlparser.core.constant.ClassType;
 import com.shuzijun.plantumlparser.core.constant.RelationType;
 
 import java.util.Arrays;
@@ -38,35 +42,32 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
     @Override
     public void visit(ClassOrInterfaceDeclaration declaration, PUmlView pUmlView) {
         PUmlClass pUmlClass = new PUmlClass();
-        if (parserConfig.isShowPackage()) {
-            pUmlClass.setPackageName(packageName);
-        } else {
-            pUmlClass.setPackageName("");
-        }
+        pUmlClass.setPackageName(parserConfig.isShowPackage() ? packageName : "");
         pUmlClass.setClassName(declaration.getNameAsString());
         if (declaration.isInterface()) {
-            pUmlClass.setClassType("interface");
+            pUmlClass.setClassType(ClassType.INTERFACE_CLASS);
         } else {
-            pUmlClass.setClassType("class");
+            pUmlClass.setClassType(ClassType.NORMAL_CLASS);
             for (Modifier modifier : declaration.getModifiers()) {
                 if (modifier.toString().trim().contains("abstract")) {
-                    pUmlClass.setClassType("abstract class");
+                    pUmlClass.setClassType(ClassType.ABSTRACT_CLASS);
                     break;
                 }
             }
         }
+        pUmlView.addPUmlClass(pUmlClass);
+
         fillFields(declaration, pUmlClass);
         fillConstructors(declaration, pUmlClass);
         fillMethods(declaration, pUmlClass);
-        pUmlView.addPUmlClass(pUmlClass);
 
         final Optional<Node> parentNode = declaration.getParentNode();
         if (!parentNode.isPresent()) {
             System.out.println("WARN no parent" + declaration);
             return;
         }
-        Node node = parentNode.get();
 
+        Node node = parentNode.get();
         NodeList<ImportDeclaration> importDeclarations = parseImport(node, pUmlClass, pUmlView);
 
         Map<String, String> importMap = new HashMap<>();
@@ -87,14 +88,13 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
         for (FieldDeclaration field : declaration.getFields()) {
             PUmlField pUmlField = new PUmlField();
             if (field.getModifiers().size() != 0) {
-                for (Modifier modifier : field.getModifiers()) {
-                    if (VisibilityUtils.isVisibility(modifier.toString().trim())) {
-                        pUmlField.setVisibility(modifier.toString().trim());
-                        break;
-                    }
-                }
+                field.getModifiers().stream()
+                        .map(v -> v.toString().trim())
+                        .filter(VisibilityUtils::isVisibility)
+                        .findFirst()
+                        .ifPresent(pUmlField::setVisibility);
             }
-            if (parserConfig.isFieldModifier(pUmlField.getVisibility())) {
+            if (parserConfig.isNeedShowModifier(pUmlField.getVisibility())) {
                 pUmlField.setStatic(field.isStatic());
                 final Optional<VariableDeclarator> firstNode = field.getVariables().getFirst();
                 if (!firstNode.isPresent()) {
@@ -105,32 +105,31 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
                 pUmlField.setName(firstNode.get().getNameAsString());
                 pUmlClass.addPUmlFieldList(pUmlField);
             }
-
         }
     }
 
     private void fillConstructors(ClassOrInterfaceDeclaration declaration, PUmlClass pUmlClass) {
-        if (parserConfig.isShowConstructors()) {
-            for (ConstructorDeclaration constructor : declaration.getConstructors()) {
-                PUmlMethod pUmlMethod = new PUmlMethod();
-                if (constructor.getModifiers().size() != 0) {
-                    for (Modifier modifier : constructor.getModifiers()) {
-                        if (VisibilityUtils.isVisibility(modifier.toString().trim())) {
-                            pUmlMethod.setVisibility(modifier.toString().trim());
-                            break;
-                        }
-                    }
+        if (!parserConfig.isShowConstructors()) {
+            return;
+        }
+        for (ConstructorDeclaration constructor : declaration.getConstructors()) {
+            PUmlMethod pUmlMethod = new PUmlMethod();
+            if (constructor.getModifiers().size() != 0) {
+                constructor.getModifiers().stream()
+                        .map(v -> v.toString().trim())
+                        .filter(VisibilityUtils::isVisibility)
+                        .findFirst()
+                        .ifPresent(pUmlMethod::setVisibility);
+            }
+            if (parserConfig.isMethodModifier(pUmlMethod.getVisibility())) {
+                pUmlMethod.setStatic(constructor.isStatic());
+                pUmlMethod.setAbstract(constructor.isAbstract());
+                pUmlMethod.setReturnType("<<Create>>");
+                pUmlMethod.setName(constructor.getNameAsString());
+                for (Parameter parameter : constructor.getParameters()) {
+                    pUmlMethod.addParam(parameter.getTypeAsString());
                 }
-                if (parserConfig.isMethodModifier(pUmlMethod.getVisibility())) {
-                    pUmlMethod.setStatic(constructor.isStatic());
-                    pUmlMethod.setAbstract(constructor.isAbstract());
-                    pUmlMethod.setReturnType("<<Create>>");
-                    pUmlMethod.setName(constructor.getNameAsString());
-                    for (Parameter parameter : constructor.getParameters()) {
-                        pUmlMethod.addParam(parameter.getTypeAsString());
-                    }
-                    pUmlClass.addPUmlMethodList(pUmlMethod);
-                }
+                pUmlClass.addPUmlMethodList(pUmlMethod);
             }
         }
     }
@@ -143,12 +142,11 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
             PUmlMethod pUmlMethod = new PUmlMethod();
 
             if (method.getModifiers().size() != 0) {
-                for (Modifier modifier : method.getModifiers()) {
-                    if (VisibilityUtils.isVisibility(modifier.toString().trim())) {
-                        pUmlMethod.setVisibility(modifier.toString().trim());
-                        break;
-                    }
-                }
+                method.getModifiers().stream()
+                        .map(v -> v.toString().trim())
+                        .filter(VisibilityUtils::isVisibility)
+                        .findFirst()
+                        .ifPresent(pUmlMethod::setVisibility);
             }
             if (parserConfig.isMethodModifier(pUmlMethod.getVisibility())) {
                 pUmlMethod.setStatic(method.isStatic());
@@ -237,6 +235,7 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
                     pUmlRelation.setParent(nameAsString);
                 }
             } else {
+                // 同包，没有import语句的情况
                 pUmlRelation.setParent(getPackageNamePrefix(pUmlClass.getPackageName()) + nameAsString);
             }
             pUmlRelation.setRelation(relationSignal);

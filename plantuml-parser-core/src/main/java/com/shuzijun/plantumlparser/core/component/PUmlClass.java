@@ -1,4 +1,4 @@
-package com.shuzijun.plantumlparser.core;
+package com.shuzijun.plantumlparser.core.component;
 
 import java.util.LinkedList;
 import java.util.List;

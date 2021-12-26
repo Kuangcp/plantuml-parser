@@ -92,7 +92,7 @@ public class ParserConfig {
         fieldModifier.add(modifier);
     }
 
-    public boolean isFieldModifier(String modifier) {
+    public boolean isNeedShowModifier(String modifier) {
         return fieldModifier.contains(modifier);
     }
 

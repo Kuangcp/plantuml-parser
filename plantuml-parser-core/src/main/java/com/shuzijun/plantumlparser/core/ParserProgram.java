@@ -27,34 +27,35 @@ public class ParserProgram {
     }
 
     public void execute() throws IOException {
-        if (parserConfig.getLanguageLevel() != null) {
-            StaticJavaParser.getConfiguration().setLanguageLevel(parserConfig.getLanguageLevel());
-        } else {
-            StaticJavaParser.getConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_8);
-        }
-        Set<File> files = this.parserConfig.getFilePaths();
+        StaticJavaParser.getConfiguration().setLanguageLevel(Optional.ofNullable(parserConfig.getLanguageLevel())
+                .orElse(ParserConfiguration.LanguageLevel.JAVA_8));
         PUmlView pUmlView = new PUmlView(this.parserConfig);
+
+        Set<File> files = this.parserConfig.getFilePaths();
         for (File file : files) {
             CompilationUnit compilationUnit = StaticJavaParser.parse(file);
             Optional<PackageDeclaration> packageDeclaration = compilationUnit.getPackageDeclaration();
-            VoidVisitor<PUmlView> classNameCollector = new ClassVoidVisitor(packageDeclaration.isPresent() ? packageDeclaration.get().getNameAsString() : "", parserConfig);
+            final String packageName = packageDeclaration.isPresent() ? packageDeclaration.get().getNameAsString() : "";
+            VoidVisitor<PUmlView> classNameCollector = new ClassVoidVisitor(packageName, parserConfig);
             classNameCollector.visit(compilationUnit, pUmlView);
         }
 
+        // std out
         if (this.parserConfig.getOutFilePath() == null) {
             System.out.println("\nNO OUTPUT FILE\n");
             System.out.println(pUmlView);
-        } else {
-            File outFile = new File(this.parserConfig.getOutFilePath());
-            if (!outFile.exists()) {
-                final boolean newFile = outFile.createNewFile();
-                if (!newFile) {
-                    System.out.println("CREATE FILE FAILED");
-                    return;
-                }
-            }
-            FileUtils.write(outFile, pUmlView.buildUmlContent(), StandardCharsets.UTF_8);
+            return;
         }
-    }
 
+        File outFile = new File(this.parserConfig.getOutFilePath());
+        FileUtils.forceMkdirParent(outFile);
+        if (!outFile.exists()) {
+            final boolean success = outFile.createNewFile();
+            if (!success) {
+                System.out.println("CREATE FILE FAILED");
+                return;
+            }
+        }
+        FileUtils.write(outFile, pUmlView.buildUmlContent(), StandardCharsets.UTF_8);
+    }
 }

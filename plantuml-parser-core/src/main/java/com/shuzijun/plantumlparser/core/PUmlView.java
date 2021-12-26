@@ -1,5 +1,6 @@
 package com.shuzijun.plantumlparser.core;
 
+import com.shuzijun.plantumlparser.core.component.PUmlClass;
 import com.shuzijun.plantumlparser.core.constant.RelationType;
 
 import java.util.ArrayList;
