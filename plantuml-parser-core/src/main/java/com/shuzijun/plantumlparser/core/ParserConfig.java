@@ -5,6 +5,7 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * 解析配置
@@ -17,14 +18,15 @@ public class ParserConfig {
      */
     private final Map<String, File> fileMap = new HashMap<>();
 
+    private final Set<String> fieldModifier = new HashSet<>();
+
+    private final Set<String> methodModifier = new HashSet<>();
+
     /**
      * 输出文件路径
      */
     private String outFilePath;
-
-    private final Set<String> fieldModifier = new HashSet<>();
-
-    private final Set<String> methodModifier = new HashSet<>();
+    private boolean outSvg = false;
 
     /**
      * 展示类 时包含包名
@@ -34,12 +36,12 @@ public class ParserConfig {
     /**
      * 展示构造器
      */
-    private boolean showConstructors = false;
+    private boolean showConstructors = true;
 
     /**
      * 展示实现 Serializable 接口关系
      */
-    private boolean showSerializableImpl = false;
+    private boolean showSerializableImpl = true;
 
     /**
      * 展示 方法
@@ -49,16 +51,17 @@ public class ParserConfig {
      * 只展示 复杂业务层 Service Adapter Handler
      */
     private boolean onlyShowLogicLayer = false;
+    private Predicate<String> logicPredicate = null;
 
     /**
      * 只展示具有关联关系的类
      */
-    private boolean onlyShowRelationClass = true;
+    private boolean onlyShowRelationClass = false;
 
     /**
      * 展示 实体循环依赖
      */
-    private boolean showCircularDepends = true;
+    private boolean showCircularDepends = false;
 
 
     private ParserConfiguration.LanguageLevel languageLevel = ParserConfiguration.LanguageLevel.JAVA_8;
@@ -144,14 +147,14 @@ public class ParserConfig {
         this.onlyShowLogicLayer = onlyShowLogicLayer;
     }
 
-    public boolean isLogicLayer(String className) {
-        return className.contains("Impl")
-                || className.contains("Handler")
-                || className.contains("Adapter")
-                || className.contains("Aspect")
-                || className.contains("Facade")
-                || className.contains("Schedule")
-                ;
+    public boolean isNeededRelation(String parent, String child) {
+        if (!this.onlyShowLogicLayer) {
+            return true;
+        }
+        if (Objects.isNull(logicPredicate)) {
+            return true;
+        }
+        return logicPredicate.test(parent) && logicPredicate.test(child);
     }
 
     public boolean isShowMethod() {
@@ -176,5 +179,17 @@ public class ParserConfig {
 
     public void setShowCircularDepends(boolean showCircularDepends) {
         this.showCircularDepends = showCircularDepends;
+    }
+
+    public void setLogicPredicate(Predicate<String> logicPredicate) {
+        this.logicPredicate = logicPredicate;
+    }
+
+    public boolean isOutSvg() {
+        return outSvg;
+    }
+
+    public void setOutSvg(boolean outSvg) {
+        this.outSvg = outSvg;
     }
 }

@@ -11,6 +11,9 @@ repositories {
 }
 
 dependencies {
+    // https://mvnrepository.com/artifact/com.credibledoc/plantuml-core
+    implementation group: 'com.credibledoc', name: 'plantuml-core', version: '1.0.43'
+
     implementation "com.github.javaparser:javaparser-core:3.20.2"
     implementation "commons-io:commons-io:2.8.0"
     testImplementation "junit:junit:4.12"

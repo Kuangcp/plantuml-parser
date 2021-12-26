@@ -1,5 +1,6 @@
 package com.shuzijun.plantumlparser.core;
 
+import com.credibledoc.plantuml.svggenerator.SvgGeneratorService;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
@@ -47,6 +48,7 @@ public class ParserProgram {
             return;
         }
 
+
         File outFile = new File(this.parserConfig.getOutFilePath());
         FileUtils.forceMkdirParent(outFile);
         if (!outFile.exists()) {
@@ -56,6 +58,11 @@ public class ParserProgram {
                 return;
             }
         }
-        FileUtils.write(outFile, pUmlView.buildUmlContent(), StandardCharsets.UTF_8);
+        if (parserConfig.isOutSvg()) {
+            String svg = SvgGeneratorService.getInstance().generateSvgFromPlantUml(pUmlView.buildUmlContent());
+            FileUtils.write(outFile, svg, StandardCharsets.UTF_8);
+        } else {
+            FileUtils.write(outFile, pUmlView.buildUmlContent(), StandardCharsets.UTF_8);
+        }
     }
 }

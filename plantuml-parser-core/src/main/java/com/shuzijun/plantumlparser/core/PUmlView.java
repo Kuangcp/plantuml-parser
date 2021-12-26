@@ -32,8 +32,7 @@ public class PUmlView {
     }
 
     public void addPUmlRelation(PUmlRelation pUmlRelation) {
-        if (parserConfig.isOnlyShowLogicLayer()
-                && (!parserConfig.isLogicLayer(pUmlRelation.getParent()) || !parserConfig.isLogicLayer(pUmlRelation.getChild()))) {
+        if (!parserConfig.isNeededRelation(pUmlRelation.getParent(), pUmlRelation.getChild())) {
             return;
         }
         relations.add(pUmlRelation);
