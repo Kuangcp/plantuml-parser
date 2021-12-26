@@ -19,6 +19,10 @@ Convert the Java source code to Plantuml
     }
 ```
 
+## parser-web
+1. gradle run
+2. open http://localhost:9000/uml?path={java project absolute path}
+
 ## TODO
 1. 重复依赖关系 Relation 去除
 1. 以关注模块为起点，追溯父级的方式延展 突出关注模块的 类设计方案
