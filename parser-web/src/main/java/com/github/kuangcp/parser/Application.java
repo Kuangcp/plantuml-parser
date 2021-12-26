@@ -2,9 +2,10 @@ package com.github.kuangcp.parser;
 
 import com.blade.Blade;
 import com.blade.mvc.RouteContext;
-import com.blade.mvc.http.Response;
 import com.shuzijun.plantumlparser.core.ParserConfig;
 import com.shuzijun.plantumlparser.core.ParserProgram;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Objects;
@@ -16,16 +17,39 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Application {
 
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+
     private static final Map<String, String> svgCache = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
+
         Blade.of()
                 .get("uml", Application::svgHandler)
-                .get("/basic-routes-example", ctx -> ctx.text("GET called"))
-                .post("/basic-routes-example", ctx -> ctx.text("POST called"))
-                .put("/basic-routes-example", ctx -> ctx.text("PUT called"))
-                .delete("/basic-routes-example", ctx -> ctx.text("DELETE called"))
+                .get("/", Application::indexPage)
                 .start(Application.class, args);
+    }
+
+    private static void indexPage(RouteContext ctx) {
+        final StringBuilder idxBuilder = new StringBuilder("<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n" +
+                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                "    <title>Plant UML Reader</title>\n" +
+                "</head>\n" +
+                "<body>\n");
+        if (!svgCache.isEmpty()) {
+            idxBuilder.append("<h2>Recent:</h2><ol>");
+            svgCache.keySet().stream().sorted()
+                    .forEach(key -> idxBuilder.append("<li><a href=\"/uml?path=")
+                            .append(key).append("\" > ")
+                            .append(key).append("</a> </li>"));
+            idxBuilder.append("</ol>");
+        }
+        idxBuilder.append("</body></html>");
+
+        ctx.html(idxBuilder.toString());
     }
 
     private static void svgHandler(RouteContext ctx) {
@@ -39,11 +63,12 @@ public class Application {
         if (Objects.nonNull(refresh)) {
             svgCache.remove(path);
         } else if (svgCache.containsKey(path)) {
-            ctx.response().header("Content-Type", "image/svg+xml");
+            ctx.response().contentType("image/svg+xml");
             ctx.text(svgCache.get(path));
             return;
         }
 
+        log.info("start path={}", path);
         final ParserConfig parserConfig = new ParserConfig();
         parserConfig.addFieldModifier("public", "private");
         parserConfig.addMethodModifier("public", "private");
@@ -52,9 +77,9 @@ public class Application {
         parserConfig.addFilePath(path);
 
         final Optional<String> svgOpt = app.buildSvg();
+        log.info("finish path={}", path);
         if (svgOpt.isPresent()) {
-            final Response response = ctx.response();
-            response.header("Content-Type", "image/svg+xml");
+            ctx.response().contentType("image/svg+xml");
             ctx.text(svgOpt.get());
             svgCache.put(path, svgOpt.get());
         } else {
