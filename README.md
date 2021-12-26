@@ -20,8 +20,10 @@ Convert the Java source code to Plantuml
 ```
 
 ## parser-web
+
 1. gradle run
-2. open http://localhost:9000/uml?path={java project absolute path}
+2. open http://localhost:9000/uml?path={java project absolute path}&refresh=true
+    1. refresh: drop cache
 
 ## TODO
 1. 重复依赖关系 Relation 去除
