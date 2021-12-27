@@ -17,9 +17,9 @@ import java.util.Set;
 /**
  * @author https://github.com/kuangcp on 2021-12-27 00:22
  */
-public class CacheFileList {
+public class StoreFileUtil {
 
-    private static final Logger log = LoggerFactory.getLogger(CacheFileList.class);
+    private static final Logger log = LoggerFactory.getLogger(StoreFileUtil.class);
 
     public static Set<String> loadFromConfig() {
 
@@ -31,6 +31,22 @@ public class CacheFileList {
             log.error("", e);
         }
         return new HashSet<>();
+    }
+
+    static boolean invalidPath(String path) {
+        final String homeDir = System.getProperty("user.home");
+        if (!path.startsWith(homeDir)) {
+            return true;
+        }
+        if (path.contains("..")) {
+            return true;
+        }
+        String allowList = System.getenv("parseAllowList");
+        if (Objects.nonNull(allowList)) {
+            return !path.startsWith(allowList);
+        }
+
+        return false;
     }
 
     public static void storeToConfig(Set<String> list) {

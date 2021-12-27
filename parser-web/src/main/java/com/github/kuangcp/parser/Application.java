@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -24,11 +22,11 @@ public class Application {
 
     private static final Logger log = LoggerFactory.getLogger(Application.class);
 
-    private static final Set<String> svgCache = CacheFileList.loadFromConfig();
+    private static final Set<String> svgCache = StoreFileUtil.loadFromConfig();
 
     public static void main(String[] args) {
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> CacheFileList.storeToConfig(svgCache)));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> StoreFileUtil.storeToConfig(svgCache)));
 
         // TODO 文件初始化到内存，退出或宕机 存储到文件
         Blade.of()
@@ -74,10 +72,10 @@ public class Application {
             return false;
         }
 
-        final String pathMd5 = CacheFileList.md5(path);
+        final String pathMd5 = StoreFileUtil.md5(path);
 
         try {
-            File file = CacheFileList.buildCacheFile(path);
+            File file = StoreFileUtil.buildCacheFile(path);
             if (!file.exists()) {
                 return false;
             }
@@ -98,7 +96,7 @@ public class Application {
 
     private static void writeSvgCache(String path, String content) {
         try {
-            FileUtils.write(CacheFileList.buildCacheFile(path), content, StandardCharsets.UTF_8);
+            FileUtils.write(StoreFileUtil.buildCacheFile(path), content, StandardCharsets.UTF_8);
         } catch (IOException e) {
             log.error("", e);
         }
@@ -111,20 +109,32 @@ public class Application {
             return;
         }
 
+        if (StoreFileUtil.invalidPath(path)) {
+            ctx.json("{\"msg\":\"error path\"}");
+            return;
+        }
+
         if (svgCache(ctx)) {
             return;
         }
 
         log.info("start path={}", path);
+
         final ParserConfig parserConfig = new ParserConfig();
         parserConfig.addFieldModifier("public", "private");
         parserConfig.addMethodModifier("public", "private");
 
+        parserConfig.setShowSerializableImpl(false);
+        parserConfig.setShowConstructors(false);
+        parserConfig.setShowMethod(true);
+        parserConfig.setOnlyShowRelationClass(true);
+
         final ParserProgram app = new ParserProgram(parserConfig);
         parserConfig.addFilePath(path);
-
         final Optional<String> svgOpt = app.buildSvg();
+
         log.info("finish path={}", path);
+
         if (svgOpt.isPresent()) {
             ctx.response().contentType("image/svg+xml");
             ctx.text(svgOpt.get());
