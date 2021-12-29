@@ -7,6 +7,8 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.visitor.VoidVisitor;
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -21,6 +23,8 @@ import java.util.Set;
  * @author shuzijun
  */
 public class ParserProgram {
+
+    private static final Logger log = LoggerFactory.getLogger(ParserProgram.class);
 
     private final ParserConfig parserConfig;
 
@@ -63,13 +67,27 @@ public class ParserProgram {
 
         Set<File> files = this.parserConfig.getFilePaths();
         for (File file : files) {
-            CompilationUnit compilationUnit = StaticJavaParser.parse(file);
-            Optional<PackageDeclaration> packageDeclaration = compilationUnit.getPackageDeclaration();
-            final String packageName = packageDeclaration.isPresent() ? packageDeclaration.get().getNameAsString() : "";
-            VoidVisitor<PUmlView> classNameCollector = new ClassVoidVisitor(packageName, parserConfig);
-            classNameCollector.visit(compilationUnit, pUmlView);
+            try {
+                CompilationUnit compilationUnit = StaticJavaParser.parse(file);
+                Optional<PackageDeclaration> packageDeclaration = compilationUnit.getPackageDeclaration();
+                final String packageName = packageDeclaration.isPresent() ? packageDeclaration.get().getNameAsString() : "";
+                VoidVisitor<PUmlView> classNameCollector = new ClassVoidVisitor(packageName, parserConfig);
+                classNameCollector.visit(compilationUnit, pUmlView);
+            } catch (Exception e) {
+                log.error("", e);
+            }
         }
         return pUmlView;
+    }
+
+    public Optional<String> buildWsd() {
+        try {
+            final PUmlView view = readClass();
+            return Optional.ofNullable(view.buildUmlContent());
+        } catch (Exception e) {
+            log.error("", e);
+        }
+        return Optional.empty();
     }
 
     public Optional<String> buildSvg() {
@@ -77,7 +95,7 @@ public class ParserProgram {
             PUmlView pUmlView = readClass();
             return Optional.of(SvgGeneratorService.getInstance().generateSvgFromPlantUml(pUmlView.buildUmlContent()));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("", e);
         }
         return Optional.empty();
     }

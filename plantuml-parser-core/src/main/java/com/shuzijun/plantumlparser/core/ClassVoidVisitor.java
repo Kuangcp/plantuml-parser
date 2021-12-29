@@ -31,10 +31,11 @@ public class ClassVoidVisitor extends VoidVisitorAdapter<PUmlView> {
     private final ParserConfig parserConfig;
 
     private final List<String> IGNORE_COMPOSITION = Arrays.asList("short", "Short", "int", "Integer", "long", "Long",
-            "String", "char", "Char", "boolean", "Boolean", "byte", "Byte", "BigDecimal", "Object", "T", "Charset",
+            "float", "Float", "double", "Double", "BigDecimal",
+            "String", "char", "Char", "boolean", "Boolean", "byte", "Byte", "Object", "T", "Charset",
             "Date", "LocalDate", "LocalDateTime");
     private final List<String> IGNORE_COMPOSITION_PREFIX = Arrays.asList("ArrayList", "List", "Set", "Map",
-            "Collection", "Function", "Predicate","Consumer");
+            "Collection", "Function", "Predicate", "Consumer");
 
     public ClassVoidVisitor(String packageName, ParserConfig parserConfig) {
         this.packageName = packageName;

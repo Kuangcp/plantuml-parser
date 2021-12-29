@@ -30,7 +30,7 @@ public class Application {
 
         // TODO 文件初始化到内存，退出或宕机 存储到文件
         Blade.of()
-                .get("uml", Application::svgHandler)
+                .get("uml", Application::umlHandler)
                 .get("/", Application::indexPage)
                 .start(Application.class, args);
     }
@@ -102,8 +102,9 @@ public class Application {
         }
     }
 
-    private static void svgHandler(RouteContext ctx) {
+    private static void umlHandler(RouteContext ctx) {
         final String path = ctx.query("path");
+        final String txt = ctx.query("txt");
         if (Objects.isNull(path) || path.trim().equals("")) {
             indexPage(ctx);
             return;
@@ -131,6 +132,14 @@ public class Application {
 
         final ParserProgram app = new ParserProgram(parserConfig);
         parserConfig.addFilePath(path);
+
+        // 仅生成 wsd 文件
+        if (Objects.nonNull(txt) && !txt.isEmpty()) {
+            final Optional<String> wsdOpt = app.buildWsd();
+            ctx.text(wsdOpt.orElse("NO Text"));
+            return;
+        }
+
         final Optional<String> svgOpt = app.buildSvg();
 
         log.info("finish path={}", path);

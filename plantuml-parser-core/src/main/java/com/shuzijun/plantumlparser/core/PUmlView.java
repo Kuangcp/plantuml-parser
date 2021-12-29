@@ -22,6 +22,7 @@ public class PUmlView {
     private final ParserConfig parserConfig;
     private final List<PUmlClass> classes = new ArrayList<>();
     private final List<PUmlRelation> relations = new ArrayList<>();
+    private final Set<String> existRelation = new HashSet<>();
 
     public PUmlView(ParserConfig parserConfig) {
         this.parserConfig = parserConfig;
@@ -35,7 +36,10 @@ public class PUmlView {
         if (!parserConfig.isNeededRelation(pUmlRelation.getParent(), pUmlRelation.getChild())) {
             return;
         }
-        relations.add(pUmlRelation);
+
+        if (existRelation.add(pUmlRelation.toString())) {
+            relations.add(pUmlRelation);
+        }
     }
 
     public String buildUmlContent() {
