@@ -46,7 +46,7 @@ public class Application {
                 "</head>\n" +
                 "<body>\n");
 
-        idxBuilder.append("<h2>Recent:</h2>");
+        idxBuilder.append("<h2>Recent: ").append(StoreFileUtil.getConfigPath()).append("</h2>");
         if (!svgCache.isEmpty()) {
             idxBuilder.append("<ol>");
             svgCache.stream().sorted()
@@ -65,7 +65,7 @@ public class Application {
      */
     private static boolean svgCache(RouteContext ctx) {
         final String refresh = ctx.query("refresh");
-        final String path = ctx.query("path");
+        final String path = getPath(ctx);
 
         if (Objects.nonNull(refresh)) {
             svgCache.remove(path);
@@ -103,7 +103,7 @@ public class Application {
     }
 
     private static void umlHandler(RouteContext ctx) {
-        final String path = ctx.query("path");
+        final String path = getPath(ctx);
         final String txt = ctx.query("txt");
         if (Objects.isNull(path) || path.trim().equals("")) {
             indexPage(ctx);
@@ -144,13 +144,27 @@ public class Application {
 
         log.info("finish path={}", path);
 
-        if (svgOpt.isPresent()) {
-            ctx.response().contentType("image/svg+xml");
-            ctx.text(svgOpt.get());
-            writeSvgCache(path, svgOpt.get());
-            svgCache.add(path);
-        } else {
+        if (!svgOpt.isPresent() || svgOpt.get().contains("Empty description")) {
             ctx.json("{\"msg\":\"generate error\"}");
+            return;
         }
+
+        ctx.response().contentType("image/svg+xml");
+        ctx.text(svgOpt.get());
+        writeSvgCache(path, svgOpt.get());
+        svgCache.add(path);
+    }
+
+    private static String getPath(RouteContext ctx) {
+        final String path = ctx.query("path");
+        if (Objects.isNull(path) || path.isEmpty()) {
+            return path;
+        }
+
+        if (path.endsWith("/")) {
+            return path.substring(0, path.length() - 1);
+        }
+
+        return path;
     }
 }

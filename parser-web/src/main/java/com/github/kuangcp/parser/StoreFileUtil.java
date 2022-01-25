@@ -61,16 +61,18 @@ public class StoreFileUtil {
         }
     }
 
-    private static File getConfigFile() {
+    static String getConfigPath() {
         final String osName = System.getProperty("os.name");
         final String homeDir = System.getProperty("user.home");
-        File file;
         if (Objects.equals(osName, "Linux")) {
-            file = new File(homeDir + "/.plantuml-parser/cache.json");
+            return homeDir + "/.plantuml-parser/";
         } else {
-            file = new File(homeDir + "\\.plantuml-parser\\cache.json");
+            return homeDir + "\\.plantuml-parser\\";
         }
-        return file;
+    }
+
+    private static File getConfigFile() {
+        return new File(getConfigPath() + "cache.json");
     }
 
     static String md5(String str) {
@@ -90,16 +92,9 @@ public class StoreFileUtil {
     }
 
     static File buildCacheFile(String path) {
-        final String osName = System.getProperty("os.name");
-        final String homeDir = System.getProperty("user.home");
         final String pathMd5 = md5(path);
+        File file = new File(getConfigPath() + pathMd5 + ".svg");
 
-        File file;
-        if (Objects.equals(osName, "Linux")) {
-            file = new File(homeDir + "/.plantuml-parser/" + pathMd5 + ".svg");
-        } else {
-            file = new File(homeDir + "\\.plantuml-parser\\" + pathMd5 + ".svg");
-        }
         try {
             FileUtils.forceMkdirParent(file);
         } catch (IOException e) {
